@@ -8,6 +8,9 @@ class T:
     pass
 
 def include(cls, dir="./", ignore=[], isobject=False):
+    ##################################################
+    ### Recursive all files under dir              ###
+    ##################################################
     files = []
     if dir[-1] != "/":
         dir += "/"
@@ -17,6 +20,10 @@ def include(cls, dir="./", ignore=[], isobject=False):
                 continue
             files.append(os.path.join(root, filename))
     for file in files:
+        ##################################################
+        ### trans normal path to import path           ###
+        ### ex: abc/def => abc.def                     ###
+        ##################################################
         packagepath = file[:-3]
         if packagepath[:2] == "./":
             packagepath = packagepath[2:]
@@ -24,13 +31,18 @@ def include(cls, dir="./", ignore=[], isobject=False):
         file = file[len(dir):]
         path = file.split("/")
         now = cls
-        print(file)
         for d in path:
             if d != path[-1]:
+                ##################################################
+                ### build instance for path dir                ###
+                ##################################################
                 if not hasattr(cls, d):
                     setattr(now, d, T())
                 now = getattr(now, d)
             else:
+                ###################################################
+                ### build instance for all class in target file ###
+                ###################################################
                 package = importlib.import_module(packagepath)
                 modules = inspect.getmembers(package, inspect.isclass)
                 reg_exp = "^.*" + packagepath + "\..*$"

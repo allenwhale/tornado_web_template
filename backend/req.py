@@ -43,7 +43,6 @@ def Service__init__():
     ### Importing Service Module                   ###
     ##################################################
     include(Service, "./service", ["base.py"], True)
-    print(Service.simple)
 
 class RequestHandler(tornado.web.RequestHandler):
     def __init__(self, *args, **kwargs):
