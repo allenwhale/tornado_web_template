@@ -1,4 +1,7 @@
-from api.simple import ApiSimpleHandler
+from include import include
+class Api:
+    pass
+include(Api, "./api/")
 urls = [
-    ('/api/simple/', ApiSimpleHandler),
+    ('/api/simple/', Api.ApiSimpleHandler),
 ]

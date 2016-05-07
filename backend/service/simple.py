@@ -1,11 +1,11 @@
 from req import Service
 from service.base import BaseService
 
-class SimpleService(BaseService):
+class simple(BaseService):
     def get_simple(self):
         second = 1
         res = yield self.db.execute('SELECT PG_SLEEP(%s);', (second,))
-        self.log("XD")
+        self.log("Service log Test")
         return (None, 'you slept %s seconds'%(second))
 
     def post_simple(self, data={}):
@@ -21,3 +21,7 @@ class SimpleService(BaseService):
         res = yield self.db.execute('SELECT %s+%s AS sum;', (data['a'], data['b'], ))
         return (None, res.fetchone()['sum'])
 
+class simple2(BaseService):
+    def get_simple(self):
+        print("OK")
+        return (None, 'you slept %s seconds'%(0))

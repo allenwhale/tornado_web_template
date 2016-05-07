@@ -11,6 +11,7 @@ from log import log
 import momoko
 import config
 from utils.form import form_validation
+from include import include
 
 class DatetimeEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -38,8 +39,11 @@ def Service__init__():
     Service.db = db
     Service.log = log
     Service.form_validation = form_validation
-    from service.simple import SimpleService
-    Service.Simple = SimpleService()
+    ##################################################
+    ### Importing Service Module                   ###
+    ##################################################
+    include(Service, "./service", ["base.py"], True)
+    print(Service.simple)
 
 class RequestHandler(tornado.web.RequestHandler):
     def __init__(self, *args, **kwargs):
