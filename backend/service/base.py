@@ -1,26 +1,12 @@
 from copy import copy
-import logging
+from log import log
+from req import Service
 
 class BaseService:
-    def __init__(self, db, rs):
-        self.db = db
-        self.rs = rs
-
-    def log(self, msg):
-        class_name = self.__class__.__name__
-        caller_function = inspect.stack()[1].function
-        caller_lineno = inspect.stack()[1].lineno
-        caller_filename = inspect.stack()[1].filename
-        msg = '<%s@%s@%s@%s> %s' % (caller_filename, caller_lineno, self.__class__.__name__, caller_function, str(msg))
-        logging.debug(msg)
-
-    def check_required_args(self, args, data):
-        for a in args:
-            if a not in data:
-                return 'Error: %s should exist' % a
-            if data[a] is None:
-                return 'Error: %s should not be None.' % a
-        return None
+    def __init__(self):
+        self.db = Service.db
+        self.form_validation = Service.form_validation
+        self.log = Service.log
 
     def gen_insert_sql(self, tablename, _data):
         data = copy(_data)

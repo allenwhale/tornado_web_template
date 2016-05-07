@@ -8,6 +8,7 @@ class ApiSimpleHandler(ApiRequestHandler):
     @tornado.gen.coroutine
     def get(self):
         err, res = yield from Service.Simple.get_simple()
+        self.log("QQ")
         self.render(res)
 
     @tornado.gen.coroutine

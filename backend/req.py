@@ -1,5 +1,4 @@
 import json
-import logging
 import datetime
 import tornado.template
 import tornado.gen
@@ -8,6 +7,10 @@ import tornado.websocket
 import datetime
 import inspect
 from urllib.parse import quote
+from log import log
+import momoko
+import config
+from utils.form import form_validation
 
 class DatetimeEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -21,17 +24,28 @@ class DatetimeEncoder(json.JSONEncoder):
 class Service:
     pass
 
+def Service__init__():
+    ##################################################
+    ### Setting db                                 ###
+    ##################################################
+    db = momoko.Pool(**config.DB_SETTING)
+    future = db.connect()
+    tornado.ioloop.IOLoop.instance().add_future(future, lambda f: tornado.ioloop.IOLoop.instance().stop())
+    tornado.ioloop.IOLoop.instance().start()
+    ##################################################
+    ### Setting Service                            ###
+    ##################################################
+    Service.db = db
+    Service.log = log
+    Service.form_validation = form_validation
+    from service.simple import SimpleService
+    Service.Simple = SimpleService()
+
 class RequestHandler(tornado.web.RequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.log = log
 
-    def log(self, msg):
-        class_name = self.__class__.__name__
-        caller_function = inspect.stack()[1].function
-        caller_lineno = inspect.stack()[1].lineno
-        caller_filename = inspect.stack()[1].filename
-        msg = '<%s@%s@%s@%s> %s' % (caller_filename, caller_lineno, self.__class__.__name__, caller_function, str(msg))
-        logging.debug(msg)
 
     def get_args(self, name):
         meta = {}
@@ -48,13 +62,27 @@ class RequestHandler(tornado.web.RequestHandler):
                 meta[n] = None
         return meta
 
+    @tornado.gen.coroutine
     def prepare(self):
+        ##################################################
+        ### Get IP                                     ###
+        ##################################################
         x_real_ip = self.request.headers.get("X-Real-IP")
         remote_ip = x_real_ip or self.request.remote_ip
         self.remote_ip = remote_ip
         print("[%s] %s %s"%(self.request.method, self.request.uri, self.remote_ip))
-
-
+        ##################################################
+        ### Get Identity                               ###
+        ##################################################
+        ### API Using token
+        ### Web Using cookie
+        ##################################################
+        ### Get Basic Information                      ###
+        ##################################################
+        
+        ##################################################
+        ### Check Permission                           ###
+        ##################################################
 
 
 class ApiRequestHandler(RequestHandler):
@@ -68,8 +96,9 @@ class ApiRequestHandler(RequestHandler):
             cls=DatetimeEncoder))
         return
 
+    @tornado.gen.coroutine
     def prepare(self):
-        super().prepare()
+        yield super().prepare()
 
 class WebRequestHandler(RequestHandler):
     def set_secure_cookie(self, name, value, expires_days=30, version=None, **kwargs):
@@ -86,8 +115,9 @@ class WebRequestHandler(RequestHandler):
     def render(self, templ, **kwargs):
         super().render('./web/template/'+templ, **kwargs)
 
+    @tornado.gen.coroutine
     def prepare(self):
-        super().prepare()
+        yield super().prepare()
 
 class StaticFileHandler(tornado.web.StaticFileHandler):
     def prepare(self):
