@@ -10,8 +10,11 @@ from urllib.parse import quote
 from log import log
 import momoko
 import config
+import types
+import re
 from utils.form import form_validation
-from include import include
+from utils.utils import *
+from include import *
 
 class DatetimeEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -43,6 +46,8 @@ def Service__init__():
     ### Importing Service Module                   ###
     ##################################################
     include(Service, "./service", ["base.py"], True)
+    Service.Permission = T()
+    include(Service.Permission, "./permission/", ["base.py"], True)
 
 class RequestHandler(tornado.web.RequestHandler):
     def __init__(self, *args, **kwargs):
@@ -66,6 +71,31 @@ class RequestHandler(tornado.web.RequestHandler):
         return meta
 
     @tornado.gen.coroutine
+    def check_permission(self):
+        path, module = get_module_path(self)
+        path = path.split(".")[:-1]
+        cls = Service.Permission
+        for directory in path:
+            if hasattr(cls, directory):
+                cls = getattr(cls, directory)
+            else:
+                return None
+        if hasattr(cls, module):
+            cls = getattr(cls, module)
+        else:
+            return None
+
+        if hasattr(cls, self.request.method.lower()):
+            res = getattr(cls, self.request.method.lower())(self)
+        else:
+            return None
+
+        if isinstance(res, types.GeneratorType):
+            res = yield from res
+        return res
+
+
+    @tornado.gen.coroutine
     def prepare(self):
         ##################################################
         ### Get IP                                     ###
@@ -86,6 +116,10 @@ class RequestHandler(tornado.web.RequestHandler):
         ##################################################
         ### Check Permission                           ###
         ##################################################
+        err = yield self.check_permission()
+        if err:
+            self.write_error(err)
+        
 
 
 class ApiRequestHandler(RequestHandler):
@@ -97,11 +131,13 @@ class ApiRequestHandler(RequestHandler):
                 'msg': msg
             },
             cls=DatetimeEncoder))
-        return
+
+    def write_error(self, err, **kwargs):
+        self.render(err)
 
     @tornado.gen.coroutine
     def prepare(self):
-        yield super().prepare()
+        res = yield super().prepare()
 
 class WebRequestHandler(RequestHandler):
     def set_secure_cookie(self, name, value, expires_days=30, version=None, **kwargs):
@@ -120,7 +156,7 @@ class WebRequestHandler(RequestHandler):
 
     @tornado.gen.coroutine
     def prepare(self):
-        yield super().prepare()
+        res = yield super().prepare()
 
 class StaticFileHandler(tornado.web.StaticFileHandler):
     def prepare(self):

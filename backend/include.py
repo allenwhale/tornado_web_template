@@ -14,11 +14,13 @@ def include(cls, dir="./", ignore=[], isobject=False):
     files = []
     if dir[-1] != "/":
         dir += "/"
+    print(dir)
     for root, dirnames, filenames in os.walk(dir):
         for filename in fnmatch.filter(filenames, '*.py'):
             if filename in ignore:
                 continue
             files.append(os.path.join(root, filename))
+    print(files)
     for file in files:
         ##################################################
         ### trans normal path to import path           ###
