@@ -1,16 +1,20 @@
 from dateutil import parser
 from datetime import datetime
 from utils.pxfilter import XssHtml
-def form_validation(form ,schema):
+
+
+def form_validation(form, schema):
     err = _form_validation(form, schema)
     return (400, err) if err else None
+
+
 def _form_validation(form, schema):
     '''
     schema:
         [{
-            ### require
+            # require
             'name': <str> # +<str> means require, default is optional
-            ### optional
+            # optional
             'type': <class>
             'non_empty': <bool> # for str, list
             'except': <list>
@@ -31,7 +35,7 @@ def _form_validation(form, schema):
         require = True if item['name'][0] == '+' else False
         name = item['name'] = item['name'][1:] if require else item['name']
 
-        ### check require
+        # check require
         if require and (name not in form or form[name] is None):
             return '%s not in form' % name
 
@@ -39,43 +43,51 @@ def _form_validation(form, schema):
             form[name] = None
             continue
         else:
-            ## check non_empty
+            # check non_empty
             if 'non_empty' in item and item['non_empty']:
                 if form[name] == item['type']() or form[name] is None:
-                    return 'value of %s: "%s" should not be empty value' % (name, str(form[name]))
+                    return 'value of %s: "%s" should not be empty value' %\
+                            (name, str(form[name]))
 
-            ### check value type
+            # check value type
             if 'type' in item:
                 if not isinstance(form[name], item['type']):
                     if item['type'] == datetime:
-                        try: form[name] = parser.parse(form[name])
-                        except Exception as e: return name + str(e)
+                        try:
+                            form[name] = parser.parse(form[name])
+                        except Exception as e:
+                            return name + str(e)
                     else:
-                        try: form[name] = item['type'](form[name])
-                        except Exception as e: return name + str(e)
+                        try:
+                            form[name] = item['type'](form[name])
+                        except Exception as e:
+                            return name + str(e)
 
-
-            ### check except
+            # check except
             if 'except' in item:
                 if form[name] in item['except']:
-                    return 'value of %s: "%s" in except list' % (name, str(form[name]))
-            
-            ### check range
+                    return 'value of %s: "%s" in except list' %\
+                            (name, str(form[name]))
+
+            # check range
             if 'range' in item:
                 if not (item['range'][0] <= form[name] <= item['range'][1]):
-                    return 'value of %s: "%s" not in range %s' % (name, str(form[name]), str(item['range']))
+                    return 'value of %s: "%s" not in range %s' %\
+                            (name, str(form[name]), str(item['range']))
 
-            ### check len_range
+            # check len_range
             if 'len_range' in item:
                 if not (item['len_range'][0] <= len(form[name]) <= item['len_range'][1]):
-                    return 'value of %s: "%s" not in len_range %s' % (name, str(form[name]), str(item['len_range']))
+                    return 'value of %s: "%s" not in len_range %s' %\
+                            (name, str(form[name]), str(item['len_range']))
 
-            ### check check_dict
+            # check check_dict
             if 'check_dict' in item:
                 err = form_validation(form[name], item['check_dict'])
-                if err: return err
+                if err:
+                    return err
 
-            ### check xss
+            # check xss
             if 'xss' in item and item['xss']:
                 xss = XssHtml()
                 xss.feed(form[name])

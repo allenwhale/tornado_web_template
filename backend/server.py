@@ -5,19 +5,21 @@ import tornado.httpserver
 
 import time
 import signal
-import momoko
-import myredis
+
 import config
 
 from req import Service
+from req import Service_init
+from req import Handler
+from req import Handler_init
+from req import Permission
+from req import Permission_init
 
-from service.simple import SimpleService
-
-from api.simple import ApiSimpleHandler
 
 def sig_handler(sig, frame):
     print('Catch Stop Signal')
     tornado.ioloop.IOLoop.instance().add_callback(shutdown)
+
 
 def shutdown():
     print('Server Stopping')
@@ -41,27 +43,23 @@ if __name__ == '__main__':
         sock = tornado.netutil.bind_sockets(config.PORT)
         tornado.process.fork_processes(0)
 
-    db = momoko.Pool(
-            **config.DB_SETTING
-            )
-    future = db.connect()
-    tornado.ioloop.IOLoop.instance().add_future(future, lambda f: tornado.ioloop.IOLoop.instance().stop())
-    tornado.ioloop.IOLoop.instance().start()
-
-    rs = myredis.MyRedis(
-            **config.REDIS_SETTING
-            )
+    Service_init()
+    Handler_init()
+    Permission_init()
 
     app = tornado.web.Application([
-        ('/api/simple/', ApiSimpleHandler),
+        ('/api/simple/', Handler.Api.Simple),
+        ('/api/log/', Handler.Api.Log),
+        ('/api/permission/', Handler.Api.Permission),
         ], ** config.TORNADO_SETTING)
 
     global srv
     srv = tornado.httpserver.HTTPServer(app)
-    if not config.TORNADO_SETTING['debug']: srv.add_sockets(sock)
-    else: srv.listen(config.PORT)
+    if not config.TORNADO_SETTING['debug']:
+        srv.add_sockets(sock)
+    else:
+        srv.listen(config.PORT)
     signal.signal(signal.SIGTERM, sig_handler)
     signal.signal(signal.SIGINT, sig_handler)
-    Service.Simple = SimpleService(db, rs)
     print('Server Started')
     tornado.ioloop.IOLoop().instance().start()

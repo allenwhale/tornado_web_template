@@ -12,7 +12,12 @@ TORNADO_SETTING['autoescape'] = 'xhtml_escape'
 TORNADO_SETTING['xheaders'] = True
 
 DB_SETTING = {}
-DB_SETTING['dsn'] = 'dbname=test user=allenwhale password=allenwhale host=localhost port=5432'
+DB_SETTING['dsn'] = '\
+        dbname=test \
+        user=allenwhale \
+        password=allenwhale \
+        host=localhost \
+        port=5432'
 DB_SETTING['size'] = 1
 DB_SETTING['max_size'] = 10
 DB_SETTING['setsession'] = ("SET TIME ZONE +8",)
