@@ -118,7 +118,7 @@ class RequestHandler(tornado.web.RequestHandler):
         ##################################################
         err = yield self.check_permission()
         if err:
-            self.write_error(err)
+            self.write_error((403, err))
         
 
 
