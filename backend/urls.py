@@ -1,8 +1,8 @@
 from include import include
-class Api:
+class Handler:
     pass
-include(Api, "./api/")
+include(Handler, "./handler/")
 urls = [
-    ('/api/simple/', Api.Simple),
-    ('/api/recur/simple/', Api.recur.Simple),
+    ('/api/simple/', Handler.api.Simple),
+    ('/api/recur/simple/', Handler.api.recur.Simple),
 ]

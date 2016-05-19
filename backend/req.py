@@ -72,24 +72,16 @@ class RequestHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def check_permission(self):
-        path, module = get_module_path(self)
-        path = path.split(".")[:-1]
-        cls = Service.Permission
-        for directory in path:
-            if hasattr(cls, directory):
-                cls = getattr(cls, directory)
+        now = Service.Permission
+        for attr in self.path[1:]:
+            if hasattr(now, attr):
+                now = getattr(now, attr)
             else:
                 return None
-        if hasattr(cls, module):
-            cls = getattr(cls, module)
-        else:
+        method = self.request.method.lower()
+        if not hasattr(now, method):
             return None
-
-        if hasattr(cls, self.request.method.lower()):
-            res = getattr(cls, self.request.method.lower())(self)
-        else:
-            return None
-
+        res = getattr(now, method)(self)
         if isinstance(res, types.GeneratorType):
             res = yield from res
         return res
@@ -103,12 +95,11 @@ class RequestHandler(tornado.web.RequestHandler):
         x_real_ip = self.request.headers.get("X-Real-IP")
         remote_ip = x_real_ip or self.request.remote_ip
         self.remote_ip = remote_ip
-        print("[%s] %s %s"%(self.request.method, self.request.uri, self.remote_ip))
+        self.log("[%s] %s %s"%(self.request.method, self.request.uri, self.remote_ip))
         ##################################################
         ### Get Identity                               ###
         ##################################################
         ### API Using token
-        ### Web Using cookie
         ##################################################
         ### Get Basic Information                      ###
         ##################################################
@@ -139,6 +130,7 @@ class ApiRequestHandler(RequestHandler):
     def prepare(self):
         res = yield super().prepare()
 
+"""
 class WebRequestHandler(RequestHandler):
     def set_secure_cookie(self, name, value, expires_days=30, version=None, **kwargs):
         kwargs['httponly'] = True
@@ -157,6 +149,7 @@ class WebRequestHandler(RequestHandler):
     @tornado.gen.coroutine
     def prepare(self):
         res = yield super().prepare()
+"""
 
 class StaticFileHandler(tornado.web.StaticFileHandler):
     def prepare(self):
