@@ -155,7 +155,7 @@ class ApiRequestHandler(RequestHandler):
         res = yield super().prepare()
         msg = yield self.check_permission()
         if msg is not None:
-            self.write_error(msg)
+            self.render(msg)
 
 class WebRequestHandler(RequestHandler):
     def write_error(self, msg, **kwargs):

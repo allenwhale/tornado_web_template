@@ -21,3 +21,9 @@ class UserSignIn(ApiRequestHandler):
         err, res = yield from Service.User.signin_by_password(self, data)
         if err: self.render(err)
         else: self.render(res)
+
+class UserSignOut(ApiRequestHandler):
+    @tornado.gen.coroutine
+    def post(self):
+        Service.User.signout(self)
+        self.render()

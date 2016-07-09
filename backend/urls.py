@@ -5,6 +5,7 @@ include(Handler, "./handler/")
 urls = [
     ('/api/users/signup/', Handler.api.UserSignUp),
     ('/api/users/signin/', Handler.api.UserSignIn),
+    ('/api/users/signout/', Handler.api.UserSignOut),
     #('/api/users/me/', Handler.api.UsersMe),
     #('/api/users/(\d+)/', Handler.api.User),
     #('/', Handler.web.Index),

@@ -90,3 +90,5 @@ class User(BaseService):
         req.set_secure_cookie('token', res['token'])
         return (None, res)
 
+    def signout(self, req):
+        req.clear_cookie('token')
