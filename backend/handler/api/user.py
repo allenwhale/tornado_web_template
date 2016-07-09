@@ -4,18 +4,20 @@ import tornado.gen
 from req import Service
 from req import ApiRequestHandler
 
-class Simple(ApiRequestHandler):
-    @tornado.gen.coroutine
-    def get(self):
-        err, res = yield from Service.Simple.get_simple()
-        self.log("Api Log Test")
-        self.render(res)
-
+class UserSignUp(ApiRequestHandler):
     @tornado.gen.coroutine
     def post(self):
-        args = ['a', 'b']
+        args = ['account', 'email', 'password', 'repassword']
         data = self.get_args(args)
-        err, res = yield from Service.Simple.post_simple(data)
+        err, res = yield from Service.User.post_user(data)
         if err: self.render(err)
         else: self.render(res)
 
+class UserSignIn(ApiRequestHandler):
+    @tornado.gen.coroutine
+    def post(self):
+        args = ['account', 'password']
+        data = self.get_args(args)
+        err, res = yield from Service.User.signin_by_password(self, data)
+        if err: self.render(err)
+        else: self.render(res)

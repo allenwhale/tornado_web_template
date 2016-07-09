@@ -16,35 +16,66 @@ def HashPassword(x):
 
 def GenToken(account):
     token = []
-    token.append(config.token['prefix'])
+    token.append(config.TOKEN['prefix'])
     token.append(hashlib.md5(account['account'].encode()).hexdigest()[:10])
     token.append(hashlib.md5((account['password'] + str(time.time())).encode()).hexdigest()[:40])
     return '@'.join(token)
 
 
 class User(BaseService):
-    def SignIn(self, data={}):
+    def post_user(self, data={}):
         required_args = [{
             'name': '+account',
             'type': str,
         }, {
             'name': '+password',
             'type': str,
-        }]
+        }, {
+            'name': '+repassword',
+            'type': str,
+        }, {
+            'name': '+email',
+            'type': str,
+        },]
         err = self.form_validation(data, required_args)
         if err: return (err, None)
-        res = yield self.db.execute("SELECT * FROM users WHERE account=%s", (data['account'],))
-        if res.rowcount == 0:
-            return ((404, "User Not Exist"), None)
+        ### check email
+        ### check password = repassword
+        if data['password'] != data['repassword']:
+            return ((400, "password is not equal to repassword"), None)
+        data.pop('repassword')
+        ### set token
+        data['token'] = GenToken(data)
+        data['password'] = HashPassword(data['password'])
+        sql, param = self.gen_insert_sql('users', data)
+
+        res = yield self.db.execute(sql, param)
         res = res.fetchone()
-        self.log(HashPassword(data['password']))
-        if res['password'] != HashPassword(data['password']):
-            return ((403, "Wrong Password"), None)
-        err, res = yield from self.get_user_by_token(res)
-        res['isLOGIN'] = True
+        if res is None:
+            return ((404, "User Not Exist"), None)
         return (None, res)
 
-    def get_user_by_token(self, data={}):
+    def signin_by_password(self, req, data={}):
+        required_args = [{
+            'name': '+account',
+            'type': str,
+        }, {
+            'name': '+password',
+            'type': str,
+        },]
+        err = self.form_validation(data, required_args)
+        if err: return (err, None)
+        res = yield self.db.execute("SELECT * FROM users WHERE account=%s", (data['account'], ))
+        res = res.fetchone()
+        if res is None:
+            return ((404, "User Not Exist"), None)
+        if res['password'] != HashPassword(data['password']):
+            return ((403, "Wrong Password"), None)
+        res.pop('password')
+        req.set_secure_cookie('token', res['token'])
+        return (None, res)
+
+    def signin_by_token(self, req, data={}):
         required_args = [{
             'name': '+token',
             'type': str,
@@ -52,12 +83,10 @@ class User(BaseService):
         err = self.form_validation(data, required_args)
         if err: return (err, None)
         res = yield self.db.execute("SELECT * FROM users WHERE token=%s", (data['token'],))
-        if res.rowcount == 0:
-            return ((403, 'no such user'), None)
         res = res.fetchone()
+        if res is None:
+            return ((404, 'User Not Exist'), None)
         res.pop('password')
-        res['isLOGIN'] = True
-        for x in map_users_type:
-            res['is'+x] = 'type' in res and res['type'] == map_users_type[x]
+        req.set_secure_cookie('token', res['token'])
         return (None, res)
 

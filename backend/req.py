@@ -111,29 +111,27 @@ class RequestHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def get_identity(self):
-        ### get by token
-        token = self.get_args(['token'])['token']
-        if token:
-            err, res = yield from Service.User.signin_by_token({'token': token})
-            if err:
-                self.account = {}
-            else:
-                self.account = res
+        cookie_token = self.get_secure_cookie('token')
+        token = None
+        if cookie_token is None:
+            ### get by token
+            token = self.get_args(['token'])['token']
         else:
-            self.account = {}
+            ### get by cookies
+            try:
+                token = cookie_token.decode()
+            except:
+                token = None
 
-        ### get by cookies
-        try:
-            token = self.get_secure_cookie('token').decode()
-            err, res = yield from Service.User.signin_by_token({'token': token})
+        if token:
+            err, res = yield from Service.User.signin_by_token(self, {'token': token})
             if err:
                 self.account = {}
                 self.clear_cookie('token')
             else:
                 self.account = res
-        except:
+        else:
             self.account = {}
-            self.clear_cookie('token')
 
 
 class ApiRequestHandler(RequestHandler):
@@ -160,10 +158,6 @@ class ApiRequestHandler(RequestHandler):
             self.write_error(msg)
 
 class WebRequestHandler(RequestHandler):
-    def set_secure_cookie(self, name, value, expires_days=30, version=None, **kwargs):
-        kwargs['httponly'] = True
-        super().set_secure_cookie(name, value, expires_days, version, **kwargs)
-
     def write_error(self, msg, **kwargs):
         status_code, err = msg
         kwargs['err'] = err

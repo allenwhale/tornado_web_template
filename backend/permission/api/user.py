@@ -1,6 +1,8 @@
 from req import Service
+from permission.base import BasePermission
 
 
-class Simple:
-    def get(self, req):
-        return 403
+class SignUp(BasePermission):
+    def post(self):
+        pass
+
