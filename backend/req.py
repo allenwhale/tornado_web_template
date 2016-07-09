@@ -16,6 +16,7 @@ from utils.form import form_validation
 from utils.utils import *
 from include import *
 from urllib.parse import quote
+import sys
 
 class DatetimeEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -158,34 +159,41 @@ class ApiRequestHandler(RequestHandler):
             self.render(msg)
 
 class WebRequestHandler(RequestHandler):
-    def write_error(self, msg, **kwargs):
-        status_code, err = msg
-        kwargs['err'] = err
+    def write_error(self, status_code, **kwargs):
         self.set_status(status_code)
-        try:
-            self.render('./err/'+str(status_code)+'.html', **kwargs)
-        except:
-            self.render('./err/err.html', **kwargs)
+        self.render('./err/%s.html'%(status_code,), **kwargs)
 
     def render(self, templ, **kwargs):
-        super().render('./web/template/'+templ, **kwargs)
+        kwargs['title'] = self.title
+        try: 
+            super().render('./template/'+templ, **kwargs)
+        except Exception as e:
+            if config.TORNADO_SETTING['debug_mode']:
+                kwargs['err'] = str(e)
+            else:
+                kwargs['err'] = ''
+            self.set_status(500)
+            self.render('./err/err.html', **kwargs)
+
 
     @tornado.gen.coroutine
     def prepare(self):
+        self.title = 'Title'
         res = yield super().prepare()
         msg = yield self.check_permission()
-        if msg is not None:
+        if isinstance(msg, tuple):
             ### if not login give it a try
             if self.account['isLOGIN']:
-                write_error(msg)
+                self.write_error(msg)
             else:
                 self.redirect("/users/signin/?next_url=%s"%quote(self.request.uri, safe=''))
 
-class StaticFileHandler(tornado.web.StaticFileHandler):
+class StaticFileHandler(tornado.web.StaticFileHandler, RequestHandler):
+    @tornado.gen.coroutine
     def prepare(self):
-        super().prepare()
+        yield super().prepare()
         msg = yield self.check_permission()
-        if msg is not None:
+        if isinstance(msg, tuple):
             self.set_status(msg[0])
             self.finish()
 

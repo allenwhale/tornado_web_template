@@ -11,6 +11,7 @@ TORNADO_SETTING['compress_response'] = True
 TORNADO_SETTING['autoescape'] = 'xhtml_escape'
 TORNADO_SETTING['xheaders'] = True
 TORNADO_SETTING['password_salt'] = ''
+TORNADO_SETTING['debug_mode'] = True
 
 DB_SETTING = {}
 DB_SETTING['dsn'] = 'dbname= user= password= host= port=5432'
