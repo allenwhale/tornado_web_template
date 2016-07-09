@@ -15,6 +15,7 @@ import re
 from utils.form import form_validation
 from utils.utils import *
 from include import *
+from urllib.parse import quote
 
 class DatetimeEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -70,6 +71,10 @@ class RequestHandler(tornado.web.RequestHandler):
                 meta[n] = None
         return meta
 
+    def set_secure_cookie(self, name, value, expires_days=30, version=None, **kwargs):
+        kwargs['httponly'] = True
+        super().set_secure_cookie(name, value, expires_days, version, **kwargs)
+
     @tornado.gen.coroutine
     def check_permission(self):
         now = Service.Permission
@@ -99,18 +104,36 @@ class RequestHandler(tornado.web.RequestHandler):
         ##################################################
         ### Get Identity                               ###
         ##################################################
-        ### API Using token
-        ##################################################
-        ### Get Basic Information                      ###
-        ##################################################
-        
+        yield self.get_identity()
         ##################################################
         ### Check Permission                           ###
         ##################################################
-        err = yield self.check_permission()
-        if err:
-            self.write_error((403, err))
-        
+
+    @tornado.gen.coroutine
+    def get_identity(self):
+        ### get by token
+        token = self.get_args(['token'])['token']
+        if token:
+            err, res = yield from Service.User.signin_by_token({'token': token})
+            if err:
+                self.account = {}
+            else:
+                self.account = res
+        else:
+            self.account = {}
+
+        ### get by cookies
+        try:
+            token = self.get_secure_cookie('token').decode()
+            err, res = yield from Service.User.signin_by_token({'token': token})
+            if err:
+                self.account = {}
+                self.clear_cookie('token')
+            else:
+                self.account = res
+        except:
+            self.account = {}
+            self.clear_cookie('token')
 
 
 class ApiRequestHandler(RequestHandler):
@@ -118,30 +141,37 @@ class ApiRequestHandler(RequestHandler):
         if isinstance(msg, tuple): code, msg = msg
         else: code = 200
         self.set_status(code)
-        self.finish(json.dumps({
+        try:
+            msg = json.dumps({
                 'msg': msg
-            },
-            cls=DatetimeEncoder))
+            }, cls=DatetimeEncoder)
+        except:
+            msg = str(msg)
+        self.finish(msg)
 
     def write_error(self, err, **kwargs):
-        self.render(err)
+        self.render((err, kwargs))
 
     @tornado.gen.coroutine
     def prepare(self):
         res = yield super().prepare()
+        msg = yield self.check_permission()
+        if msg is not None:
+            self.write_error(msg)
 
-"""
 class WebRequestHandler(RequestHandler):
     def set_secure_cookie(self, name, value, expires_days=30, version=None, **kwargs):
         kwargs['httponly'] = True
         super().set_secure_cookie(name, value, expires_days, version, **kwargs)
 
-    def write_error(self, err, **kwargs):
-        try: status_code, err = err
-        except: status_code = err; err = ''
+    def write_error(self, msg, **kwargs):
+        status_code, err = msg
         kwargs['err'] = err
         self.set_status(status_code)
-        self.render('./err/'+str(status_code)+'.html', **kwargs)
+        try:
+            self.render('./err/'+str(status_code)+'.html', **kwargs)
+        except:
+            self.render('./err/err.html', **kwargs)
 
     def render(self, templ, **kwargs):
         super().render('./web/template/'+templ, **kwargs)
@@ -149,11 +179,21 @@ class WebRequestHandler(RequestHandler):
     @tornado.gen.coroutine
     def prepare(self):
         res = yield super().prepare()
-"""
+        msg = yield self.check_permission()
+        if msg is not None:
+            ### if not login give it a try
+            if self.account['isLOGIN']:
+                write_error(msg)
+            else:
+                self.redirect("/users/signin/?next_url=%s"%quote(self.request.uri, safe=''))
 
 class StaticFileHandler(tornado.web.StaticFileHandler):
     def prepare(self):
         super().prepare()
+        msg = yield self.check_permission()
+        if msg is not None:
+            self.set_status(msg[0])
+            self.finish()
 
 class WebSocketHandler(tornado.websocket.WebSocketHandler):
     def __init__(self, *args, **kwargs):
