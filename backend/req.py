@@ -87,7 +87,7 @@ class RequestHandler(tornado.web.RequestHandler):
         method = self.request.method.lower()
         if not hasattr(now, method):
             return None
-        res = getattr(now, method)(self)
+        res = getattr(now, method)(self, *self.path_args)
         if isinstance(res, types.GeneratorType):
             res = yield from res
         return res
