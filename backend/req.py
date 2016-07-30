@@ -7,14 +7,14 @@ import tornado.websocket
 import datetime
 import inspect
 from urllib.parse import quote
-from log import log
+from utils.log import log
 import momoko
 import config
 import types
 import re
 from utils.form import form_validation
 from utils.utils import *
-from include import *
+from utils.include import *
 from urllib.parse import quote
 import sys
 
@@ -47,9 +47,9 @@ def Service__init__():
     ##################################################
     ### Importing Service Module                   ###
     ##################################################
-    include(Service, "./service", ["base.py"], True)
+    include(Service, "./service", ["base.py"], True, False)
     Service.Permission = T()
-    include(Service.Permission, "./permission/", ["base.py"], True)
+    include(Service.Permission, "./permission/", ["base.py"], True, True)
 
 class RequestHandler(tornado.web.RequestHandler):
     def __init__(self, *args, **kwargs):
@@ -87,7 +87,7 @@ class RequestHandler(tornado.web.RequestHandler):
         method = self.request.method.lower()
         if not hasattr(now, method):
             return None
-        res = getattr(now, method)(self, *self.path_args)
+        res = getattr(now, method)(self)
         if isinstance(res, types.GeneratorType):
             res = yield from res
         return res
@@ -125,7 +125,7 @@ class RequestHandler(tornado.web.RequestHandler):
                 token = None
 
         if token:
-            err, res = yield from Service.User.signin_by_token(self, {'token': token})
+            err, res = yield from Service.Session.signin_by_token(self, {'token': token})
             if err:
                 self.account = {}
                 self.clear_cookie('token')
@@ -133,7 +133,6 @@ class RequestHandler(tornado.web.RequestHandler):
                 self.account = res
         else:
             self.account = {}
-
 
 class ApiRequestHandler(RequestHandler):
     def render(self, msg=""):
@@ -149,6 +148,8 @@ class ApiRequestHandler(RequestHandler):
         self.finish(msg)
 
     def write_error(self, err, **kwargs):
+        self.log(err)
+        self.log(kwargs)
         self.render((err, kwargs))
 
     @tornado.gen.coroutine
@@ -165,6 +166,7 @@ class WebRequestHandler(RequestHandler):
 
     def render(self, templ, **kwargs):
         kwargs['title'] = self.title
+        kwargs['account'] = self.account
         try: 
             super().render('./template/'+templ, **kwargs)
         except Exception as e:
@@ -173,7 +175,7 @@ class WebRequestHandler(RequestHandler):
             else:
                 kwargs['err'] = ''
             self.set_status(500)
-            self.render('./err/err.html', **kwargs)
+            super().render('./template/err/err.html', **kwargs)
 
 
     @tornado.gen.coroutine

@@ -1,5 +1,4 @@
 from copy import copy
-from log import log
 from req import Service
 
 class BaseService:
