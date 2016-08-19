@@ -1,38 +1,52 @@
-import os
 import fnmatch
-import tornado.util
+import importlib
 import inspect
-import regex
+import os
+import re
 
-
-class NOP:
+class T:
     pass
 
-
-def include(cls, directory, ignore=[], isobject=True):
+def include(cls, dir="./", ignore=[], isobject=False, all_path=True):
+    ##################################################
+    ### Recursive all files under dir              ###
+    ##################################################
     files = []
-    for root, dirnames, filenames in os.walk(directory):
-        files.extend(os.path.join(root, filename)
-                     for filename in fnmatch.filter(filenames, '*.py')
-                     if filename not in ignore)
+    if dir[-1] != "/":
+        dir += "/"
+    if dir[0:2] == "./":
+        dir = dir[2:]
+    for root, dirnames, filenames in os.walk(dir):
+        for filename in fnmatch.filter(filenames, '*.py'):
+            if filename in ignore:
+                continue
+            files.append(os.path.join(root, filename))
     for file in files:
-        package_path = file[:-3]
-        if package_path[:2] == './':
-            package_path = package_path[2:]
-        package_path = package_path.replace('/', '.')
+        ##################################################
+        ### trans normal path to import path           ###
+        ### ex: abc/def.py => abc.def                  ###
+        ##################################################
+        packagepath = file[:-3]
+        packagepath = packagepath.replace("/", ".")
+        classbuildpath = packagepath[len(dir):]
         now = cls
-        for attr in package_path.split('.')[1:-1]:
-            if not hasattr(now, attr):
-                setattr(now, attr, NOP())
-            now = getattr(now, attr)
-        package = tornado.util.import_object(package_path)
+        if all_path:
+            for attr in classbuildpath.split("."):
+                if not hasattr(now, attr):
+                    setattr(now, attr, T())
+                now = getattr(now, attr)
+        else:
+            for attr in classbuildpath.split(".")[:-1]:
+                if not hasattr(now, attr):
+                    setattr(now, attr, T())
+                now = getattr(now, attr)
+        package = importlib.import_module(packagepath)
         classes = inspect.getmembers(package, inspect.isclass)
-        re = regex.compile("<class '%s.*" % package_path)
-        for class_name, class_path in classes:
-            if re.match(str(class_path)):
+        reg_exp = "^.*" + packagepath + "\..*$"
+        for classname, classpath in classes:
+            if re.match(reg_exp, str(classpath)):
                 if isobject:
-                    setattr(now, class_name, getattr(package, class_name)())
+                    setattr(now, classname, getattr(package, classname)())
                 else:
-                    setattr(now, class_name, getattr(package, class_name))
-                setattr(getattr(now, class_name),
-                        'path', package_path.split('.')[1:-1] + [class_name])
+                    setattr(now, classname, getattr(package, classname))
+                setattr(getattr(now, classname), 'path', packagepath.split(".") + [classname])

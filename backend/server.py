@@ -5,15 +5,11 @@ import tornado.httpserver
 
 import time
 import signal
-
 import config
 
-from req import Service
-from req import Service_init
-from req import Handler
-from req import Handler_init
-from req import Permission
-from req import Permission_init
+from req import Service__init__
+
+from urls import urls
 
 
 def sig_handler(sig, frame):
@@ -43,15 +39,15 @@ if __name__ == '__main__':
         sock = tornado.netutil.bind_sockets(config.PORT)
         tornado.process.fork_processes(0)
 
-    Service_init()
-    Handler_init()
-    Permission_init()
+    ##################################################
+    ### Setting Service                            ###
+    ##################################################
+    Service__init__()
 
-    app = tornado.web.Application([
-        ('/api/simple/', Handler.Api.Simple),
-        ('/api/log/', Handler.Api.Log),
-        ('/api/permission/', Handler.Api.Permission),
-        ], ** config.TORNADO_SETTING)
+    ##################################################
+    ### Setting url                                ###
+    ##################################################
+    app = tornado.web.Application(urls, ** config.TORNADO_SETTING)
 
     global srv
     srv = tornado.httpserver.HTTPServer(app)

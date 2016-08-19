@@ -1,3 +1,7 @@
+*.swp
+*.swo
+config.py
+flush_db.sh
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
