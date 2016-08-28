@@ -1,4 +1,4 @@
-import utils.log
+from utils import log
 
 class BasePermission:
     def __init__(self):

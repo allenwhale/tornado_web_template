@@ -47,9 +47,6 @@ class Service:
     io_loop.add_future(future, lambda f, io_loop=io_loop: io_loop.stop())
     io_loop.start()
 
-    rs = myredis.MyRedis(
-            **config.REDIS_SETTING
-            )
     form_validation = form_validation
     log = log
 
