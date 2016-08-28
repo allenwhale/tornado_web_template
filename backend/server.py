@@ -7,10 +7,6 @@ import time
 import signal
 import config
 
-from req import Service__init__
-
-from urls import urls
-
 
 def sig_handler(sig, frame):
     print('Catch Stop Signal')
@@ -37,16 +33,18 @@ if __name__ == '__main__':
     print('Server Starting')
     if not config.TORNADO_SETTING['debug']:
         sock = tornado.netutil.bind_sockets(config.PORT)
-        tornado.process.fork_processes(0)
+        tornado.process.fork_processes(config.TORNADO_SETTING['processes'])
 
     ##################################################
     ### Setting Service                            ###
     ##################################################
+    from req import Service__init__
     Service__init__()
 
     ##################################################
     ### Setting url                                ###
     ##################################################
+    from urls import urls
     app = tornado.web.Application(urls, ** config.TORNADO_SETTING)
 
     global srv

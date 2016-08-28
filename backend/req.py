@@ -1,7 +1,7 @@
+import tornado
 import tornado.template
 import tornado.gen
 import tornado.web
-import tornado.ioloop
 import tornado.websocket
 
 import momoko
@@ -197,7 +197,7 @@ class WebRequestHandler(RequestHandler):
         try: 
             super().render('./template/'+templ, **kwargs)
         except Exception as e:
-            if config.TORNADO_SETTING['debug_mode']:
+            if config.TORNADO_SETTING['debug']:
                 kwargs['err'] = str(e)
             else:
                 kwargs['err'] = ''
