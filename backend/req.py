@@ -51,13 +51,6 @@ class Service:
     log = log
 
 
-def Service_init():
-    include(Service, './service', ['base.py'], True)
-
-
-class Handler:
-    pass
-
 def Service__init__():
     ##################################################
     ### Setting db                                 ###
@@ -219,14 +212,14 @@ class WebRequestHandler(RequestHandler):
         kwargs['title'] = self.title
         kwargs['account'] = self.account
         try: 
-            super().render('./template/'+templ, **kwargs)
+            super().render(templ, **kwargs)
         except Exception as e:
             if config.TORNADO_SETTING['debug']:
                 kwargs['err'] = str(e)
             else:
                 kwargs['err'] = ''
             self.set_status(500)
-            super().render('./template/err/err.html', **kwargs)
+            super().render('./err/err.html', **kwargs)
 
 
     @tornado.gen.coroutine
