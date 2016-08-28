@@ -134,6 +134,30 @@ class RequestHandler(tornado.web.RequestHandler):
         ##################################################
         ### Check Permission                           ###
         ##################################################
+        def encode(data):
+            if isinstance(data, dict):
+                for x in data:
+                    try:
+                        data[x] = encode(data[x])
+                    except:
+                        pass
+            elif isinstance(data, list):
+                for x in data:
+                    try:
+                        x = encode(x)
+                    except:
+                        pass
+            else:
+                data = str(data).encode()
+            return data
+        content_type = self.request.headers.get('Content-Type')
+        if content_type and content_type.lower().startswith("application/json"):
+            try:
+                json_data = json.loads(self.request.body.decode())
+                json_data = encode(json_data)
+                self.request.arguments.update({x: y if isinstance(y, list) else [y,] for x, y in json_data.items()})
+            except:
+                pass
 
     @tornado.gen.coroutine
     def get_identity(self):
