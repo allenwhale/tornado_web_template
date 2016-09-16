@@ -1,23 +1,43 @@
 from dateutil import parser
 from datetime import datetime
+from enum import Enum
 
+class ERR_TYPE(Enum):
+    REQUIER = 1
+    TYPE = 2
+    NON_EMPTY = 3
+    EXCEPT = 4
+    RANGE = 5
+    LEN_RANGE = 6
 
-global ERR_FORMAT
-ERR_FORMAT = {}
-ERR_FORMAT['REQUIRE'] = '{desc} not in form'
-ERR_FORMAT['TYPE'] = '{desc}: {exception}'
-ERR_FORMAT['NON_EMPTY'] = '{desc} cannot be empty'
-ERR_FORMAT['EXCEPT'] = '{desc} cannot be one of {except}'
-ERR_FORMAT['RANGE'] = '{desc} must in range {range}'
-ERR_FORMAT['LEN_RANGE'] = 'length of {desc} must in range {len_range}'
+def custom_errmsg_format(err_type, item, exception=None):
+    return None
 
+def default_errmsg_format(err_type, item, exception=None):
+    err_msg = custom_errmsg_format(err_type, item, exception)
+    if err_msg is not None:
+        return err_msg
+    if err_type == ERR_TYPE.REQUIER:
+        err_msg = '%s is not in form' % item['desc']
+    elif err_type == ERR_TYPE.TYPE:
+        err_msg = '%s must be %s' % (item['desc'], item['type'].__name__)
+    elif err_type == ERR_TYPE.NON_EMPTY:
+        err_msg = '%s can not be empty' % item['desc']
+    elif err_type == ERR_TYPE.EXCEPT:
+        err_msg = '%s can not be a value of %s' % (item['value'], item['desc'])
+    elif err_type == ERR_TYPE.RANGE:
+        err_msg = 'value of %s must in range[%s, %s]' % (item['desc'], *item['range'])
+    elif err_type == ERR_TYPE.LEN_RANGE:
+        err_msg = 'length of value of %s must in range[%s, %s]' % (item['desc'], *item['len_range'])
+    return err_msg
 
 def form_validation(form, schema):
     err = _form_validation(form, schema)
     return (400, err) if err else None
 
-def register_err_format(err_format):
-    ERR_FORMAT.update(err_format)
+def register_custom_errmsg(custom):
+    global custom_errmsg_format
+    custom_errmsg_format = custom
 
 def _form_validation(form, schema):
     '''
@@ -59,7 +79,7 @@ def _form_validation(form, schema):
 
         # check require
         if require and (name not in form or form[name] is None):
-            return ERR_FORMAT['REQUIRE'].format(**item)
+            return default_errmsg_format(ERR_TYPE.REQUIER, item)
 
         
         if not require and (name not in form or form[name] is None):
@@ -75,34 +95,32 @@ def _form_validation(form, schema):
                     try: 
                         form[name] = item['value'] = parser.parse(form[name])
                     except Exception as e: 
-                        item['exception'] = e
-                        return ERR_FORMAT['TYPE'].format(**item)
+                        return default_errmsg_format(ERR_TYPE.TYPE, item, e)
                 else:
                     try: 
                         form[name] = item['value'] = item['type'](form[name])
                     except Exception as e: 
-                        item['exception'] = e
-                        return ERR_FORMAT['TYPE'].format(**item)
+                        return default_errmsg_format(ERR_TYPE.TYPE, item, e)
 
         ## check non_empty
         if 'non_empty' in item and item['non_empty']:
             if form[name] == item['type']() or form[name] is None:
-                return ERR_FORMAT['NON_EMPTY'].format(**item)
+                return default_errmsg_format(ERR_TYPE.NON_EMPTY, item)
 
         ### check except
         if 'except' in item:
             if form[name] in item['except']:
-                return ERR_FORMAT['EXCEPT'].format(**item)
+                return default_errmsg_format(ERR_TYPE.EXCEPT, item)
         
         ### check range
         if 'range' in item:
             if not (item['range'][0] <= form[name] <= item['range'][1]):
-                return ERR_FORMAT['RANGE'].format(**item)
+                return default_errmsg_format(ERR_TYPE.RANGE, item)
 
         ### check len_range
         if 'len_range' in item:
             if not (item['len_range'][0] <= len(form[name]) <= item['len_range'][1]):
-                return ERR_FORMAT['LEN_RANGE'].format(**item)
+                return default_errmsg_format(ERR_TYPE.LEN_RANGE, item)
 
         ### check check_dict
         if 'check_dict' in item:
@@ -110,3 +128,4 @@ def _form_validation(form, schema):
             if err: return err
 
     return None
+
