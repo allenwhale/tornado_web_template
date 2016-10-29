@@ -39,16 +39,7 @@ class DatetimeEncoder(json.JSONEncoder):
 
 
 class Service:
-    db = momoko.Pool(
-            **config.DB_SETTING
-            )
-    future = db.connect()
-    io_loop = tornado.ioloop.IOLoop.instance()
-    io_loop.add_future(future, lambda f, io_loop=io_loop: io_loop.stop())
-    io_loop.start()
-
-    form_validation = form_validation
-    log = log
+    pass
 
 
 def Service__init__():
